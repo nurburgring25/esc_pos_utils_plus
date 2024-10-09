@@ -22,7 +22,7 @@ class Generator {
   int spaceBetweenRows;
 
   // ************************ Internal helpers ************************
-  int _getMaxCharsPerLine(PosFontType? font) {
+  int getMaxCharsPerLine(PosFontType? font) {
     if (_paperSize == PaperSize.mm58) {
       return (font == null || font == PosFontType.fontA) ? 32 : 42;
     } else if (_paperSize == PaperSize.mm72) {
@@ -50,10 +50,10 @@ class Generator {
       charsPerLine = maxCharsPerLine;
     } else {
       if (styles.fontType != null) {
-        charsPerLine = _getMaxCharsPerLine(styles.fontType);
+        charsPerLine = getMaxCharsPerLine(styles.fontType);
       } else {
         charsPerLine =
-            _maxCharsPerLine ?? _getMaxCharsPerLine(_styles.fontType);
+            _maxCharsPerLine ?? getMaxCharsPerLine(_styles.fontType);
       }
     }
     return charsPerLine;
@@ -184,7 +184,7 @@ class Generator {
       final missingPx = targetWidth - widthPx;
       final extra = Uint8List(missingPx);
 
-      oneChannelBytes = List<int>.filled(heightPx * targetWidth, 0);
+      oneChannelBytes = List<int>.filled(heightPx * targetWidth, 0, growable: true);
 
       for (int i = 0; i < heightPx; i++) {
         final pos =
@@ -215,10 +215,16 @@ class Generator {
     for (int i = 0; i < bytes.length; i += pxPerLine) {
       int newVal = 0;
       for (int j = 0; j < pxPerLine; j++) {
+        int gatau = i + j;
+
+        if (gatau >= bytes.length) {
+          gatau = bytes.length - 1;
+        }
+
         newVal = _transformUint32Bool(
           newVal,
           pxPerLine - j,
-          bytes[i + j] > threshold,
+          bytes[gatau] > threshold,
         );
       }
       res.add(newVal ~/ 2);
@@ -270,7 +276,7 @@ class Generator {
     List<int> bytes = [];
     _font = font;
     if (font != null) {
-      _maxCharsPerLine = maxCharsPerLine ?? _getMaxCharsPerLine(font);
+      _maxCharsPerLine = maxCharsPerLine ?? getMaxCharsPerLine(font);
       bytes += font == PosFontType.fontB ? cFontB.codeUnits : cFontA.codeUnits;
       _styles = _styles.copyWith(fontType: font);
     }
@@ -413,7 +419,7 @@ class Generator {
   /// [mode] is used to define the full or partial cut (if supported by the printer)
   List<int> cut({PosCutMode mode = PosCutMode.full}) {
     List<int> bytes = [];
-    bytes += emptyLines(5);
+
     if (mode == PosCutMode.partial) {
       bytes += cCutPart.codeUnits;
     } else {
@@ -785,7 +791,7 @@ class Generator {
   /// If [len] is null, then it will be defined according to the paper width
   List<int> hr({String ch = '-', int? len, int linesAfter = 0}) {
     List<int> bytes = [];
-    int n = len ?? _maxCharsPerLine ?? _getMaxCharsPerLine(_styles.fontType);
+    int n = len ?? _maxCharsPerLine ?? getMaxCharsPerLine(_styles.fontType);
     String ch1 = ch.length == 1 ? ch : ch[0];
     bytes += text(List.filled(n, ch1).join(), linesAfter: linesAfter);
     return bytes;
